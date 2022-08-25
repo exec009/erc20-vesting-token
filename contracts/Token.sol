@@ -14,14 +14,19 @@ struct BalanceLock {
 
 contract Token is VestingFunds, IToken {
     uint256 public stakingRate;
+    uint256 public stakingEndTime;
     mapping(address => BalanceLock) public _lockedBalance;
-    constructor(uint256 initialSupply, uint256 _stakingRate) VestingFunds("VestingToken", "VTK") {
+    constructor(uint256 initialSupply, uint256 _stakingRate, uint256 _stakingEndTime) VestingFunds("VestingToken", "VTK") {
         _mint(msg.sender, initialSupply);
         stakingRate = _stakingRate;
+        stakingEndTime = _stakingEndTime;
         distribute();
     }
     function setStakingRate(uint256 rate) external override onlyOwner {
         stakingRate = rate;
+    }
+    function setStakingEndTime(uint256 time) external override onlyOwner {
+        stakingEndTime = time;
     }
     function lockBalance(uint256 amount) external override {
         require(balanceOf(_msgSender()) >= amount, "Token: locking amount exceeds balance");
@@ -58,6 +63,9 @@ contract Token is VestingFunds, IToken {
         return super.balanceOf(account) - _lockedBalance[account].amount;
     }
     function calculateStake(uint256 amount, uint256 time) internal view returns(uint256) {
-        return (((block.timestamp - time) / 86400) * stakingRate * amount) / 100000;
+        if (stakingEndTime > block.timestamp)
+           return (((block.timestamp - time) / 86400) * stakingRate * amount) / 100000;
+        else
+            return (((stakingEndTime - time) / 86400) * stakingRate * amount) / 100000;
     }
 }
